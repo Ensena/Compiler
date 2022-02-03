@@ -1,5 +1,6 @@
 FROM openjdk:8
 COPY builder /app/builder
 WORKDIR /app
+USER 1001
 #EXPOSE  8080
 ENTRYPOINT [ "/app/builder" ]

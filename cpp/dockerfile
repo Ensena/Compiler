@@ -1,5 +1,6 @@
 FROM gcc:4.9
 COPY builder /app/builder
 WORKDIR /app
+USER 1001
 #EXPOSE  8080
 ENTRYPOINT [ "/app/builder" ]

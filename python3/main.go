@@ -13,8 +13,9 @@ import (
 func main() {
 
 	ws := gin.Default()
+	ws.Use(CORSMiddleware())
 	ws.Use(apmgin.Middleware(ws))
-	ws.GET("/api/v1/compiler/java", func(ctx *gin.Context) {
+	ws.POST("/compiler/python", func(ctx *gin.Context) {
 		c := compiler.Compiler{}
 		c.Save = save
 		c.Build = TestPython3
@@ -23,40 +24,53 @@ func main() {
 	ws.Run(":8000")
 }
 
-const PATH = "/files/java"
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
 
-func save(UserID, Name, File string) string {
-	folder := fmt.Sprintf(""+PATH+"/src/%s", UserID)
-	os.MkdirAll(folder, os.ModePerm)
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
 
-	folder = fmt.Sprintf("%s/%s", folder, UserID)
+		c.Next()
+	}
+}
+
+const PATH = "/files/python"
+
+func save(UserID, Name, Time, Content string) string {
+
+	folder := fmt.Sprintf("%s/src/%s/%s/%s", PATH, UserID, Name, Time)
 	os.MkdirAll(folder, os.ModePerm)
 	f, err := os.Create(folder + "/main.py")
+	folderBuilder := fmt.Sprintf("%s/%s/%s", UserID, Name, Time)
 	if err != nil {
 		fmt.Println(err)
-		return folder
+		return folderBuilder
 	}
-
-	_, err = f.WriteString(File)
+	_, err = f.WriteString(Content)
 	if err != nil {
 		fmt.Println(err)
 		f.Close()
-		return folder
+		return folderBuilder
 	}
 	err = f.Close()
 	if err != nil {
 		fmt.Println(err)
-		return folder
+		return folderBuilder
 	}
-
-	fmt.Println("HE GUADRADO", "/files/python3/"+folder+"/main.py")
-	return folder
+	return folderBuilder
 
 }
 
 func TestPython3(path string) (bool, string) {
 
-	cmd := exec.Command("sh", "-c", "python -m py_compile /files/python3/"+path+"/main.py")
+	cmd := exec.Command("sh", "-c", "python -m py_compile "+PATH+"/src/"+path+"/main.py")
+	//cmd := exec.Command("sh", "-c", "python -m py_compile /files/python3/"+path+"/main.py")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return true, fmt.Sprintf("%s %s", out, err)
